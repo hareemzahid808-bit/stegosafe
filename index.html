@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="StegoSafe — Secure client-side image steganography with optional AES-256 encryption." />
+<title>StegoSafe — Secure Image Steganography</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+      </svg>
+    </div>
+    <div>
+      <h1>StegoSafe</h1>
+      <p class="tagline">Secure Image Steganography &amp; Message Recovery</p>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge">🔒 AES‑256</span>
+    <span class="badge">🖼️ LSB</span>
+    <span class="badge">💻 100% Client‑Side</span>
+  </div>
+</header>
+
+<main class="container">
+
+  <nav class="tabs" role="tablist" aria-label="Application sections">
+    <button class="tab active" data-tab="encode" role="tab" aria-selected="true" aria-controls="panel-encode">
+      <span aria-hidden="true">🔐</span> Hide Message
+    </button>
+    <button class="tab" data-tab="decode" role="tab" aria-selected="false" aria-controls="panel-decode">
+      <span aria-hidden="true">🔓</span> Extract Message
+    </button>
+    <button class="tab" data-tab="about" role="tab" aria-selected="false" aria-controls="panel-about">
+      <span aria-hidden="true">ℹ️</span> About
+    </button>
+  </nav>
+
+  <!-- ============================================================
+       HIDE MESSAGE
+  ============================================================ -->
+  <section id="panel-encode" class="panel active" role="tabpanel" aria-labelledby="tab-encode">
+    <div class="grid grid-3">
+
+      <!-- Step 1: Cover image -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">1</span>
+          <h2>Cover Image</h2>
+        </div>
+        <div class="dropzone" id="encodeDrop" tabindex="0" role="button" aria-label="Choose cover image">
+          <input type="file" id="encodeFile" accept="image/png,image/bmp,image/webp" hidden />
+          <div class="dropzone-icon" aria-hidden="true">📁</div>
+          <p class="dropzone-title">Drop image here or click to browse</p>
+          <p class="hint">PNG · BMP · WEBP — lossless formats only</p>
+        </div>
+        <div class="preview hidden" id="encodePreviewWrap">
+          <canvas id="encodePreview" aria-label="Cover image preview"></canvas>
+          <div class="meta" id="encodeMeta"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Secret & encryption -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">2</span>
+          <h2>Secret Message</h2>
+        </div>
+        <label for="secretMessage">Your confidential message</label>
+        <textarea id="secretMessage" rows="6" placeholder="Type the message you want to hide inside the image…" spellcheck="false"></textarea>
+        <div class="counter"><span id="charCount">0</span> characters</div>
+
+        <div class="divider"></div>
+
+        <label class="switch">
+          <input type="checkbox" id="useEncryption" />
+          <span class="slider" aria-hidden="true"></span>
+          <span class="switch-label">
+            <strong>Encrypt with AES‑256</strong>
+            <small>Password-protect your message before embedding</small>
+          </span>
+        </label>
+
+        <div id="passwordArea" class="password-area hidden">
+          <label for="encPassword">Password (min 6 characters)</label>
+          <input type="password" id="encPassword" autocomplete="new-password" placeholder="Enter a strong password" />
+          <label for="encPasswordConfirm">Confirm password</label>
+          <input type="password" id="encPasswordConfirm" autocomplete="new-password" placeholder="Re-enter password" />
+          <p class="hint" id="passwordHint"></p>
+        </div>
+
+        <button class="btn primary" id="encodeBtn" disabled>
+          <span class="btn-spinner hidden" id="encodeSpinner" aria-hidden="true"></span>
+          <span id="encodeBtnLabel">🔒 Embed Message</span>
+        </button>
+        <div class="status" id="encodeStatus" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- Step 3: Result -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">3</span>
+          <h2>Stego Image</h2>
+        </div>
+        <div id="encodePlaceholder" class="placeholder">
+          <div class="placeholder-icon" aria-hidden="true">🖼️</div>
+          <p>Your stego image will appear here after embedding.</p>
+        </div>
+        <div class="preview hidden" id="encodeResultWrap">
+          <canvas id="encodeResult" aria-label="Stego image preview"></canvas>
+          <div class="meta" id="encodeResultMeta"></div>
+          <a class="btn success" id="downloadLink" download="stegosafe.png">⬇️ Download PNG</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       EXTRACT MESSAGE
+  ============================================================ -->
+  <section id="panel-decode" class="panel" role="tabpanel" aria-labelledby="tab-decode">
+    <div class="grid grid-3">
+
+      <!-- Step 1: Stego image -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">1</span>
+          <h2>Stego Image</h2>
+        </div>
+        <div class="dropzone" id="decodeDrop" tabindex="0" role="button" aria-label="Choose stego image">
+          <input type="file" id="decodeFile" accept="image/png,image/bmp,image/webp" hidden />
+          <div class="dropzone-icon" aria-hidden="true">📂</div>
+          <p class="dropzone-title">Drop stego image here or click to browse</p>
+          <p class="hint">Upload the PNG produced by StegoSafe</p>
+        </div>
+        <div class="preview hidden" id="decodePreviewWrap">
+          <canvas id="decodePreview" aria-label="Stego image preview"></canvas>
+          <div class="meta" id="decodeMeta"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Extraction controls -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">2</span>
+          <h2>Extraction</h2>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="useDecryption" />
+          <span class="slider" aria-hidden="true"></span>
+          <span class="switch-label">
+            <strong>Message is encrypted</strong>
+            <small>Check if the message was password-protected</small>
+          </span>
+        </label>
+
+        <div id="decryptArea" class="password-area hidden">
+          <label for="decPassword">Password</label>
+          <input type="password" id="decPassword" autocomplete="current-password" placeholder="Enter decryption password" />
+        </div>
+
+        <button class="btn primary" id="decodeBtn" disabled>
+          <span class="btn-spinner hidden" id="decodeSpinner" aria-hidden="true"></span>
+          <span id="decodeBtnLabel">🔓 Extract Message</span>
+        </button>
+        <button class="btn secondary" id="clearDecodeBtn">🗑️ Clear</button>
+        <div class="status" id="decodeStatus" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- Step 3: Recovered message -->
+      <div class="card">
+        <div class="card-head">
+          <span class="step-badge">3</span>
+          <h2>Recovered Message</h2>
+        </div>
+        <textarea id="recoveredMessage" rows="10" readonly placeholder="The recovered secret will appear here…"></textarea>
+        <button class="btn secondary" id="copyMsg" disabled>📋 Copy to Clipboard</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ABOUT
+  ============================================================ -->
+  <section id="panel-about" class="panel" role="tabpanel" aria-labelledby="tab-about">
+    <div class="about-grid">
+      <div class="card">
+        <h2>🧠 How StegoSafe Works</h2>
+        <ol class="about-list">
+          <li><strong>LSB Steganography</strong> — Each pixel's RGB channels have their least significant bit replaced with one bit of your payload. The change is imperceptible to the human eye.</li>
+          <li><strong>Payload Framing</strong> — A 14-byte header <code>STEG</code> magic, version, flag, 32-bit length, and CRC-32 checksum precede your data. This guarantees accurate extraction.</li>
+          <li><strong>Optional AES‑256‑GCM</strong> — When a password is supplied, your message is encrypted using AES-256-GCM with a PBKDF2-derived key (100,000 iterations, SHA-256). Random salt and IV are generated per operation.</li>
+          <li><strong>100% Client-Side</strong> — No images, messages, or passwords are ever transmitted. Everything runs in your browser.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>📦 Payload Format</h2>
+        <pre class="code-block">[ "STEG" ][version:1][flag:1][len:4][crc32:4][data:N]
+
+flag = 0x00 → plaintext UTF-8
+flag = 0x01 → AES-256-GCM encrypted
+              data = salt(16) | iv(12) | ciphertext+tag</pre>
+        <p class="hint">Capacity = ⌊(width × height × 3) / 8⌋ − 14 bytes</p>
+      </div>
+
+      <div class="card">
+        <h2>⚠️ Limitations</h2>
+        <ul class="about-list">
+          <li>Only <strong>lossless</strong> formats work — never re-save as JPEG.</li>
+          <li>Resizing, rotating, or re-editing the stego image destroys hidden data.</li>
+          <li>Screenshots and messenger apps may alter pixels.</li>
+          <li>Steganography hides <em>presence</em>, not content. It does not guarantee undetectability against forensic analysis.</li>
+          <li>Store your password safely — it cannot be recovered.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>🔐 Cryptography Details</h2>
+        <ul class="about-list">
+          <li><strong>Cipher:</strong> AES-256-GCM (authenticated encryption)</li>
+          <li><strong>KDF:</strong> PBKDF2-SHA-256 · 100,000 iterations · 16-byte salt</li>
+          <li><strong>IV:</strong> 12 bytes, cryptographically random per message</li>
+          <li><strong>Auth Tag:</strong> 16 bytes appended automatically by WebCrypto (tamper detection)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <p>StegoSafe · Educational &amp; defensive security tool · All processing is local · © <span id="year"></span></p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
